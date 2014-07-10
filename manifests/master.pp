@@ -79,9 +79,18 @@ class puppet::master (
   $puppetdb_strict_validation = $::puppet::params::puppetdb_strict_validation,
   $dns_alt_names              = ['puppet'],
   $digest_algorithm           = $::puppet::params::digest_algorithm,
+  $puppetlabs_repo            = false,
 ) inherits puppet::params {
 
   anchor { 'puppet::master::begin': }
+
+  class { 'puppet::repo::puppetlabs':
+    ensure => $puppetlabs_repo ? {
+      true    => 'present',
+      default => 'absent',
+    },
+    before => Package[$puppet_master_package],
+  }
 
   if ! defined(User[$::puppet::params::puppet_user]) {
     user { $::puppet::params::puppet_user:
@@ -98,21 +107,8 @@ class puppet::master (
     }
   }
 
-  if $::osfamily == 'Debian'
-  {
-    package { 'puppetmaster-common':
-      ensure   => $version,
-    }
-    package { $puppet_master_package:
-      ensure  => $version,
-      require => Package[puppetmaster-common],
-    }
-  }
-  else
-  {
-    package { $puppet_master_package:
-      ensure         => $version,
-    }
+  package { $puppet_master_package:
+    ensure  => $version,
   }
 
   Anchor['puppet::master::begin'] ->

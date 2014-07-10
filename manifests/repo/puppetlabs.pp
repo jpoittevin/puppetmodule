@@ -2,25 +2,30 @@
 # This module is used to setup the puppetlabs repos
 # that can be used to install puppet.
 #
-class puppet::repo::puppetlabs() {
+class puppet::repo::puppetlabs (
+  $ensure = present,
+) {
 
-  if($::osfamily == 'Debian') {
-    Apt::Source {
-      location    => 'http://apt.puppetlabs.com',
-      key         => '4BD6EC30',
-      key_content => template('puppet/pgp.key'),
+  case $::osfamily {
+    'Debian': {
+      apt::source { 'apt.puppetlabs.com':
+        ensure    => $ensure,
+        location  => 'http://apt.puppetlabs.com/',
+        release   => $::lsbdistcodename,
+        repos     => 'main dependencies',
+        key       => '4BD6EC30',
+      }
     }
-    apt::source { 'puppetlabs':      repos => 'main' }
-    apt::source { 'puppetlabs-deps': repos => 'dependencies' }
-    } elsif $::osfamily == 'Redhat' {
+    'Redhat': {
       if $::operatingsystem == 'Fedora' {
         $ostype='fedora'
         $prefix='f'
       } else {
-          $ostype='el'
-          $prefix=''
+        $ostype='el'
+        $prefix=''
       }
       yumrepo { 'puppetlabs-deps':
+        ensure   => $ensure,
         baseurl  => "http://yum.puppetlabs.com/${ostype}/${prefix}\$releasever/dependencies/\$basearch",
         descr    => 'Puppet Labs Dependencies $releasever - $basearch ',
         enabled  => '1',
@@ -29,13 +34,16 @@ class puppet::repo::puppetlabs() {
       }
 
       yumrepo { 'puppetlabs':
+        ensure   => $ensure,
         baseurl  => "http://yum.puppetlabs.com/${ostype}/${prefix}\$releasever/products/\$basearch",
         descr    => 'Puppet Labs Products $releasever - $basearch',
         enabled  => '1',
         gpgcheck => '1',
         gpgkey   => 'http://yum.puppetlabs.com/RPM-GPG-KEY-puppetlabs',
       }
-    } else {
+    }
+    default: {
       fail("Unsupported osfamily ${::osfamily}")
     }
+  }
 }
